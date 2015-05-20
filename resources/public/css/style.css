@@ -1,2 +1,12 @@
-/* some style */
+body {
+  padding: 0 10px;
+  margin: 40px auto;
+  max-width: 1024px;
 
+  font-family: "Montserrat", sans-serif;
+  font-size: 18px;
+  line-height: 1.6;
+
+  color: blanchedalmond;
+  background: mediumslateblue;
+}

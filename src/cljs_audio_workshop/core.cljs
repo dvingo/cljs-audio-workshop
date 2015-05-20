@@ -1,6 +1,7 @@
 (ns ^:figwheel-always cljs-audio-workshop.core
-    (:require[om.core :as om :include-macros true]
-              [om.dom :as dom :include-macros true]))
+    (:require [om.core :as om :include-macros true]
+              [om.dom :as dom :include-macros true]
+              [cljs-audio-workshop.components.mic-chart :refer [mic-chart-view]]))
 
 (enable-console-print!)
 
@@ -13,7 +14,7 @@
 (set-prop-if-undefined! "AudioContext" js/window ["AudioContext" "webkitAudioContext" "mozAudioContext"])
 (set-prop-if-undefined! "getUserMedia" js/navigator ["webkitGetUserMedia" "mozGetUserMedia"])
 
-(defonce app-state (atom {:text "Hello there" :analyzer-node nil}))
+(defonce app-state (atom {:text "Hello there" :analyser-node nil}))
 
 ;; {:audio-recorder #<[object Object]>
 ;;    :analyser-node #<[object AnalyserNode]>
@@ -75,7 +76,10 @@
     (om/root
       (fn [data owner]
         (reify om/IRender
-          (render [_] (dom/h1 nil (:text data)))))
+          (render [_]
+            (dom/div nil
+                     (om/build mic-chart-view data)
+                     (dom/h1 nil (:text data))))))
       app-state
       {:target (. js/document (getElementById "app"))})))
 
@@ -88,3 +92,5 @@
     (.getUserMedia js/navigator audio-constraints
                    got-stream
                    #(.log js/console "ERROR getting user media"))))
+(defn on-js-reload []
+  )
