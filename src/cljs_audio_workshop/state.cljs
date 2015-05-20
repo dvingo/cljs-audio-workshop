@@ -43,8 +43,21 @@
 
   (defonce app-state (atom db)))
 
+
 (defn sounds []
   (om/ref-cursor (:sounds (om/root-cursor app-state))))
+
+(defn samples []
+  (om/ref-cursor (:samples (om/root-cursor app-state))))
+
+(defn tracks []
+  (om/ref-cursor (:tracks (om/root-cursor app-state))))
+
+(defn track-samples []
+  (om/ref-cursor (:track-samples (om/root-cursor app-state))))
+
+(defn ui []
+  (om/ref-cursor (:ui (om/root-cursor app-state))))
 
 (defonce audio-context (js/window.AudioContext.))
 
@@ -67,6 +80,14 @@
    :current-offset 0
    :current-note-type "Quarter"})
 
+(defn make-new-sample [sound]
+  {:id (uuid/make-random)
+   :name (:name sound)
+   :audio-buffer (:audio-buffer sound)
+   :offset (:current-offset sound)
+   :type (:current-note-type sound)
+   :sound (:id sound)})
+
 (defn save-sound! [app-state sound-name]
   (let [{:keys [audio-recorder analyser-node]} @app-state
         buffer-length (.-frequencyBinCount analyser-node)]
@@ -84,9 +105,26 @@
       (.record audio-recorder))
     (om/transact! app-state :is-recording not)))
 
+(defn handle-update-sound-note-type [app-state sound note-type]
+  (let [i (last (om/path sound))
+        current-selector-width (note-type->width note-type wave-width)
+        x-offset (.clamp goog.math (:current-offset sound) 0 (- wave-width current-selector-width))
+        new-sound (assoc sound :current-note-type note-type :current-offset x-offset)]
+    (om/transact! (sounds) #(assoc % i new-sound))))
+
+(defn handle-update-sound-offset [sound-idx x-offset]
+  (let [snds (sounds)
+        new-sound (assoc (get snds sound-idx) :current-offset x-offset)]
+    (om/transact! snds #(assoc % sound-idx new-sound))))
+
 (defn start-actions-handler [actions-chan app-state]
   (go-loop [action-vec (<! actions-chan)]
     (match [action-vec]
       [[:toggle-recording sound-name]] (handle-toggle-recording app-state sound-name)
+      [[:set-sound-note-type sound note-type]]
+           (handle-update-sound-note-type app-state sound note-type)
+      [[:set-sound-offset sound-index x-offset]]
+           (handle-update-sound-offset sound-index x-offset)
+      [[:new-sample sound]] (om/transact! (samples) #(conj % (make-new-sample sound)))
       :else (.error js/console "Unknown handler: " (clj->js action-vec)))
     (recur (<! actions-chan))))

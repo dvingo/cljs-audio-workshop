@@ -2,6 +2,7 @@
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs.core.async :refer [put!]]
+            [cljs-audio-workshop.components.wave-selector :refer [wave-selector-view]]
             [cljs-audio-workshop.state :refer [audio-context wave-width wave-height
                                           note-type->width note-types bpm
                                           recording-duration-sec play-buffer!]]
@@ -66,10 +67,10 @@
                          :ref    "canvas-ref"}
                     "no canvas")
 
-        ;(om/build wave-selector-view sound
-          ;{:state {:x-offset selector-offset
-                   ;:canvas-width selector-width
-                   ;:max-width wave-width}})
+        (om/build wave-selector-view sound
+          {:state {:x-offset selector-offset
+                   :canvas-width selector-width
+                   :max-width wave-width}})
         (dom/div nil
 
           (dom/button #js {:onClick #(put! (:action-chan (om/get-shared owner))

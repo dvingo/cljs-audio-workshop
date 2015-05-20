@@ -1,10 +1,25 @@
-(ns cljs-audio-workshop.utils)
+(ns cljs-audio-workshop.utils
+  (:require [clojure.string :as string]
+            [cljs.core.async :refer [put! chan]]
+            [goog.events :as events]))
 
 (defn max-of-array [array-of-nums]
   (.apply js/Math.max nil array-of-nums))
 
 (defn min-of-array [array-of-nums]
   (.apply js/Math.min nil array-of-nums))
+
+(defn listen
+  ([el type]
+   (let [out (chan)]
+     (events/listen el type
+       (fn [e] (put! out e)))
+     out))
+  ([el type tx]
+   (let [out (chan 1 tx)]
+     (events/listen el type
+       (fn [e] (put! out e)))
+     out)))
 
 (defn lin-interp [x0 x1 y0 y1]
   (fn [x]
