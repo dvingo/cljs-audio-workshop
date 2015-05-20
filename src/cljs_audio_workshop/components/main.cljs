@@ -3,7 +3,9 @@
             [om.dom :as dom :include-macros true]
             [cljs.core.async :refer [put!]]
             [cljs-audio-workshop.state :refer [start-actions-handler]]
-            [cljs-audio-workshop.components.mic-chart :refer [mic-chart-view]]))
+            [cljs-audio-workshop.components.mic-chart :refer [mic-chart-view]]
+            [cljs-audio-workshop.components.audio-buffers :refer [audio-buffers-view]]
+            [cljs-audio-workshop.components.recorder :refer [recorder-view]]))
 
 (defn main-view [data owner]
   (reify
@@ -13,8 +15,6 @@
     om/IRender
     (render [_]
       (dom/div nil
-        (dom/button #js {:onClick #(put! (:action-chan (om/get-shared owner)) [:some-action])}
-                    "Some Action")
-        (dom/button #js {:onClick #(put! (:action-chan (om/get-shared owner)) [:broken-action])}
-                    "Unknown Action")
+        (om/build recorder-view data)
+        (om/build audio-buffers-view data)
         (om/build mic-chart-view data)))))

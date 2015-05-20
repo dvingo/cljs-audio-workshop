@@ -24,7 +24,9 @@
         analyser-node (.createAnalyser audio-context)]
     (set! (.-fftSize analyser-node) 2048)
     (.connect audio-input analyser-node)
-    (swap! app-state assoc :analyser-node analyser-node)
+    (swap! app-state assoc :audio-recorder (js/Recorder. audio-input
+                                                         #js {:workerPath "js/recorderWorker.js"})
+                           :analyser-node analyser-node)
 
     (om/root main-view app-state
       {:shared {:action-chan (chan)}
@@ -40,4 +42,5 @@
                    got-stream
                    #(.log js/console "ERROR getting user media"))))
 
-(defn on-js-reload [])
+(defn on-js-reload []
+  (swap! app-state update-in [:__figwheel_counter] inc))
