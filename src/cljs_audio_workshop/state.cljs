@@ -2,7 +2,8 @@
   (:require [om.core :as om :include-macros true]
             [cljs-uuid.core :as uuid]
             [cljs.core.async :refer [<!]]
-            [cljs.core.match :refer-macros [match]])
+            [cljs.core.match :refer-macros [match]]
+            [cljs-audio-workshop.utils :refer [lin-interp]])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
 (def wave-width 400)
@@ -146,6 +147,13 @@
   (let [sample-width (get note-type->width (:type sample))]
     (* (/ sample-width wave-width) (recording-duration-sec))))
 
+(defn play-track-sample! [track-sample]
+  (let [sample (by-id (samples) (:sample track-sample))]
+    (play-buffer! audio-context
+                  (:audio-buffer sample)
+                  ((lin-interp 0 wave-width 0 (recording-duration-sec)) (:offset sample))
+                  (sample-duration sample))))
+
 (defn handle-toggle-recording [app-state sound-name]
   (let [{:keys [is-recording audio-recorder]} @app-state]
     (if is-recording
@@ -201,5 +209,8 @@
                                            :selected-track-idx (second (om/path track))))
       [[:set-track-sample-offset track-sample offset]]
            (handle-set-track-sample-offset app-state track-sample offset)
+      [[:toggle-playback]] (om/transact! (ui) :is-playing not)
+      [[:play-track-samples track-samples-to-play]]
+           (doseq [s track-samples-to-play] (play-track-sample! s))
       :else (.error js/console "Unknown handler: " (clj->js action-vec)))
     (recur (<! actions-chan))))
