@@ -7,7 +7,15 @@
 
 (def wave-width 400)
 (def wave-height 100)
+(def track-width 600)
+(def track-sample-height 40)
+(def sample-width 80)
+(def sample-height 80)
 (def bpm 120)
+(def composition-duration-sec 10)
+(def seconds-per-beat (/ bpm 60))
+(def sixteenth-note-length (* 0.25 seconds-per-beat))
+(def audio-look-ahead-time-sec 0.5)
 
 (defn recording-duration []
   "Length of a quarter note in milliseconds."
@@ -27,6 +35,27 @@
    "Whole"   wave-width})
 
 (def note-types (keys note-type->width))
+
+(def note-type->bg-color
+  {"Eighth"  "mediumvioletred"
+   "Quarter" "darkorchid"
+   "Half"    "darksalmon"
+   "Whole"   "peachpuff"})
+
+(defn by-id [cursor id]
+  (first (filter #(= (:id %) id) cursor)))
+
+(declare samples)
+
+(defn track-sample->bg-color [track-sample]
+  (let [sample (by-id (samples) (:sample track-sample))]
+    (get note-type->bg-color (:type sample))))
+
+(def note-type->color
+  {"Eighth"  "blanchedalmond"
+   "Quarter" "blanchedalmond"
+   "Half"    "blanchedalmond"
+   "Whole"   "mediumpurple"})
 
 (let [db {:compositions []
           :tracks []
@@ -88,6 +117,17 @@
    :type (:current-note-type sound)
    :sound (:id sound)})
 
+(defn make-new-track []
+  {:id (uuid/make-random)
+   :name nil
+   :track-samples []})
+
+(defn make-track-sample [sample]
+  {:id (uuid/make-random)
+   :sample (:id sample)
+   :is-playing false
+   :offset 0})
+
 (defn save-sound! [app-state sound-name]
   (let [{:keys [audio-recorder analyser-node]} @app-state
         buffer-length (.-frequencyBinCount analyser-node)]
@@ -97,6 +137,14 @@
         (om/transact! app-state :sounds
           #(conj % (make-new-sound (aget buffers 0) sound-name)))
         (.clear audio-recorder)))))
+
+(defn track-samples-for-track [track]
+  (let [track-samples (track-samples)]
+    (map #(by-id track-samples %) (:track-samples track))))
+
+(defn sample-duration [sample]
+  (let [sample-width (get note-type->width (:type sample))]
+    (* (/ sample-width wave-width) (recording-duration-sec))))
 
 (defn handle-toggle-recording [app-state sound-name]
   (let [{:keys [is-recording audio-recorder]} @app-state]
@@ -116,6 +164,24 @@
   (let [snds (sounds)
         new-sound (assoc (get snds sound-idx) :current-offset x-offset)]
     (om/transact! snds #(assoc % sound-idx new-sound))))
+(defn handle-set-track-name [app-state track trk-name]
+  (let [i (last (om/path track))
+        new-track (assoc (get (tracks) i) :name trk-name)]
+    (om/transact! (tracks) #(assoc % i new-track))))
+
+(defn handle-add-sample-to-track [app-state sample]
+  (when-let [track-idx (:selected-track-idx (ui))]
+    (let [track (get (tracks) track-idx)
+          new-t-sample (make-track-sample sample)
+          new-track-samples (conj (:track-samples track) (:id new-t-sample))
+          new-track (assoc track :track-samples new-track-samples)]
+      (om/transact! (tracks) #(assoc % track-idx new-track))
+      (om/transact! (track-samples) #(conj % new-t-sample)))))
+
+(defn handle-set-track-sample-offset [app-state t-sample offset]
+  (let [sample-i (last (om/path t-sample))
+        new-t-sample (assoc t-sample :offset offset)]
+    (om/transact! (track-samples) #(assoc % sample-i new-t-sample))))
 
 (defn start-actions-handler [actions-chan app-state]
   (go-loop [action-vec (<! actions-chan)]
@@ -126,5 +192,14 @@
       [[:set-sound-offset sound-index x-offset]]
            (handle-update-sound-offset sound-index x-offset)
       [[:new-sample sound]] (om/transact! (samples) #(conj % (make-new-sample sound)))
+      [[:make-new-track]]  (om/transact! (tracks) #(conj % (make-new-track)))
+      [[:set-track-name track trk-name]] (handle-set-track-name app-state track trk-name)
+      [[:toggle-buffers]] (om/transact! app-state [:ui :buffers-visible] not)
+      [[:add-sample-to-track sample]] (handle-add-sample-to-track app-state sample)
+      [[:select-track track]] (om/transact! (ui)
+                                 #(assoc % :selected-track-id (:id track)
+                                           :selected-track-idx (second (om/path track))))
+      [[:set-track-sample-offset track-sample offset]]
+           (handle-set-track-sample-offset app-state track-sample offset)
       :else (.error js/console "Unknown handler: " (clj->js action-vec)))
     (recur (<! actions-chan))))

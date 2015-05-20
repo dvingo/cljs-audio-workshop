@@ -10,3 +10,56 @@ body {
   color: BlanchedAlmond;
   background: MediumSlateBlue;
 }
+.middle-views:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.samples {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-start;
+  float: left;
+}
+
+.sample {
+  position: relative;
+  margin: 8px;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.sample .name {
+  line-height: 1em;
+  margin: 0;
+  padding: 0;
+  word-wrap: break-word;
+  font-family: Raleway, sans-serif;
+  font-size: 1em;
+  font-weight: 700;
+}
+.sample .note-type {
+  position: absolute;
+  top: -20px;
+  right: 10px;
+  color: mediumaquamarine;
+}
+
+.track .container {
+  height: 40px;
+  position: relative;
+}
+.track-sample {
+  position: absolute;
+}
+.track-sample:hover {
+  cursor: pointer;
+}
+.play-head {
+  position: absolute;
+  width: 2px;
+  background: mediumspringgreen;
+  z-index: 999;
+}
